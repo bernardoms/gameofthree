@@ -1,0 +1,41 @@
+version: '3.2'
+
+services:
+  game-of-three:
+    build: ../
+    container_name: game-of-three
+    ports:
+      - "8080:8080"
+
+  ## LOGS CONTAINERS
+  filebeat:
+    hostname: filebeat
+    build:
+      context: ../logs/filebeat
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro           # Docker logs
+      - /var/run/docker.sock:/var/run/docker.sock:ro                       # Additional information about containers
+      - ./filebeat/data:/usr/share/filebeat/data:rw                        # Persistence data
+    links:
+      - elasticsearch
+
+  elasticsearch:
+    build:
+      context: ../logs/elasticsearch/
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - cluster.name=logging-cluster
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+      - discovery.type=single-node
+
+  kibana:
+    build:
+      context: ../logs/kibana/
+    ports:
+      - "5601:5601"
+    environment:
+      - "LOGGING_QUIET=true"
+    depends_on:
+      - elasticsearch
